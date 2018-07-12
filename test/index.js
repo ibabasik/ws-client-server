@@ -57,6 +57,4 @@ describe('ws-client-server', function () {
         client.close();
     })
 
-
-
 });

@@ -21,6 +21,26 @@ const _ = {
     clone: clone
 };
 
+
+if (!String.prototype.format) {
+    String.prototype.format = function() {
+        let str = this.toString();
+
+        if (!arguments.length) {
+            return str;
+        }
+
+        const argType = typeof arguments[0];
+        const args = (('string' === argType || 'number' === argType) ? arguments : arguments[0]);
+
+        for (let arg in args) {
+            str = str.replace(new RegExp('\\{' + arg + '\\}', 'gi'), args[arg]);
+        }
+
+        return str;
+    };
+}
+
 const error = console.error.bind(console),
     log = console.log.bind(console);
 
