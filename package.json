@@ -9,7 +9,7 @@
     "test": "NODE_ENV=test mocha --reporter spec test --exit"
   },
   "author": "ibabasik@yandex.ru",
-  "license": "Apache 2.0",
+  "license": "Apache-2.0",
   "dependencies": {
     "intel": "^1.2.0",
     "lodash": "^4.17.10",
