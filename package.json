@@ -1,6 +1,6 @@
 {
   "name": "ws-client-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Wrapper for native WebSocket",
   "main": "index.js",
   "browser": "browser/WsClient.js",
@@ -14,7 +14,7 @@
     "intel": "^1.2.0",
     "lodash": "^4.17.10",
     "uuid": "^3.3.2",
-    "uws": "^10.148.1"
+    "uws": "10.148.1"
   },
   "devDependencies": {
     "chai": "^4.1.2",
