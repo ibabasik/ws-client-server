@@ -191,13 +191,13 @@ WsClient.prototype._onEvent = function (eventName, handler, isAsk) {
 
 			if (_.isString(err)) {
 				errorMsg = err;
-				error(err);
+				self.error(err);
 			} else if (_.isError(err)) {
 				errorMsg = "Internal main error.";
-				error(err.stack);
+				self.error(err.stack);
 			} else {
 				errorMsg = err.toString();
-				error(err);
+				self.error(err);
 			}
 
 			if (isAsk) {
@@ -278,7 +278,7 @@ WsClient.prototype._initWebSocket = function () {
 		var closeCode = event.code;
 		var reason = event.reason;
 
-		log('ws disconnected: {closeCode} {reason}'.format({closeCode: closeCode, reason: reason}));
+		self.info('ws disconnected: {closeCode} {reason}'.format({closeCode: closeCode, reason: reason}));
 
 		self._isConnected = false;
 
@@ -334,7 +334,7 @@ WsClient.prototype._safeSend = function (data) {
 
 		ws.send(str);
 	} catch (e) {
-		console.error("Fail send: " + e.stack);
+		self.error("Fail send: " + e.stack);
 	}
 };
 
@@ -350,7 +350,7 @@ WsClient.prototype._handleEventQueue = function () {
 	try {
 		msg = JSON.parse(msg);
 	} catch (e) {
-		error("FAKE PROTOCOL");
+		self.error("FAKE PROTOCOL");
 
 		self._safeSend({ok: false, replyTo: msg.id, error: 'Wrong JSON'});
 		//.then(() => self._socket.close(1000, "Wrong protocol"));
@@ -363,7 +363,7 @@ WsClient.prototype._handleEventQueue = function () {
 		delete self._replyMap[msg.replyTo];
 
 		if (_.isUndefined(obj)) {
-			error('The handler for msg not found: #{replyTo}'.format({replyTo: msg.replyTo}));
+			self.error('The handler for msg not found: #{replyTo}'.format({replyTo: msg.replyTo}));
 			//self._socket.close(1000, 'Wrong protocol');
 		} else {
 			if (msg.ok) {
@@ -376,7 +376,7 @@ WsClient.prototype._handleEventQueue = function () {
 		var eventHandler = self._eventMap[msg.name];
 
 		if (!eventHandler) {
-			console.error({
+			self.error({
 				ok: false,
 				replyTo: msg.id,
 				error: 'Event "{name}" is not exists'.format({name: msg.name})
