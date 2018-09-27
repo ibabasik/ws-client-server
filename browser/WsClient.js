@@ -11,346 +11,380 @@ import clone from 'lodash/clone';
 
 import WsError from './WsError';
 
-const _ = {
-    pull: pull,
-    forEach: forEach,
-    isFunction: isFunction,
-    isString: isString,
-    isError: isError,
-    isUndefined: isUndefined,
-    clone: clone
+var _ = {
+	pull: pull,
+	forEach: forEach,
+	isFunction: isFunction,
+	isString: isString,
+	isError: isError,
+	isUndefined: isUndefined,
+	clone: clone
 };
 
 
 if (!String.prototype.format) {
-    String.prototype.format = function() {
-        let str = this.toString();
+	String.prototype.format = function() {
+		var str = this.toString();
 
-        if (!arguments.length) {
-            return str;
-        }
+		if (!arguments.length) {
+			return str;
+		}
 
-        const argType = typeof arguments[0];
-        const args = (('string' === argType || 'number' === argType) ? arguments : arguments[0]);
+		var argType = typeof arguments[0];
+		var args = (('string' === argType || 'number' === argType) ? arguments : arguments[0]);
 
-        for (let arg in args) {
-            str = str.replace(new RegExp('\\{' + arg + '\\}', 'gi'), args[arg]);
-        }
+		for (var arg in args) {
+			str = str.replace(new RegExp('\\{' + arg + '\\}', 'gi'), args[arg]);
+		}
 
-        return str;
-    };
+		return str;
+	};
 }
 
-const error = console.error.bind(console),
-    log = console.log.bind(console);
+// var error = console.error.bind(console),
+//     log = console.log.bind(console);
 
-function WsClient() {
-    this._msgId = 0;
-    this._isConnected = false;
-    this._handleEvents = true;
+function WsClient(options) {
+	options = options || {};
+	this._msgId = 0;
+	this._isConnected = false;
+	this._handleEvents = true;
 
-    this._replyMap = {};
-    this._eventMap = {};
-    this._eventQueue = [];
+	this._replyMap = {};
+	this._eventMap = {};
+	this._eventQueue = [];
 
-    this._nativeEventHandlers = {};
+	var logLevels = {
+		error: 0,
+		info: 1,
+		debug: 2,
+		verbose: 3
+	};
+
+	this._nativeEventHandlers = {};
+	this._logLevel = logLevels[options.logLevel || 'info'];
+	var self = this;
+	this.debug = function(){
+		if (self._logLevel >= logLevels.debug){
+			var args = ['DEBUG:'].concat(Array.prototype.slice.call(arguments, 0));
+			console.log.apply(console, args);
+		}
+	}
+	this.error = function(){
+		if (self._logLevel >= logLevels.error){
+			console.error.apply(console, arguments);
+		}
+	}
+	this.info = function() {
+		if (self._logLevel >= logLevels.info){
+			var args = ['INFO:'].concat(Array.prototype.slice.call(arguments, 0));
+			console.log.apply(console, args);
+		}
+	}
+	this.verbose =function () {
+		if (self._logLevel >= logLevels.verbose){
+			var args = ['VERBOSE:'].concat(Array.prototype.slice.call(arguments, 0));
+			console.log.apply(console, args);
+		}
+	}
 }
 
 WsClient.prototype.on = function (eventName, handler) {
-    let handlers = this._nativeEventHandlers[eventName];
+	var handlers = this._nativeEventHandlers[eventName];
 
-    if (!handlers) {
-        handlers = this._nativeEventHandlers[eventName] = [];
-    }
+	if (!handlers) {
+		handlers = this._nativeEventHandlers[eventName] = [];
+	}
 
-    handlers.push(handler);
+	handlers.push(handler);
 };
 
 WsClient.prototype.once = function (eventName, handler){
-    const self = this;
+	var self = this;
 
-    let handlers = this._nativeEventHandlers[eventName];
+	var handlers = this._nativeEventHandlers[eventName];
 
-    if (!handlers) {
-        handlers = this._nativeEventHandlers[eventName] = [];
-    }
+	if (!handlers) {
+		handlers = this._nativeEventHandlers[eventName] = [];
+	}
 
-    const newHandler = function () {
-        _.pull(self._nativeEventHandlers[eventName], newHandler);
-        handler.apply(null, arguments);
-    };
+	var newHandler = function () {
+		_.pull(self._nativeEventHandlers[eventName], newHandler);
+		handler.apply(null, arguments);
+	};
 
-    handlers.push(newHandler);
+	handlers.push(newHandler);
 };
 
 WsClient.prototype.off = function (eventName, handler) {
-    _.pull(this._nativeEventHandlers[eventName], handler);
+	_.pull(this._nativeEventHandlers[eventName], handler);
 };
 
 WsClient.prototype.emit = function (eventName, data) {
-    const handlers = _.clone(this._nativeEventHandlers[eventName]);
-    _.forEach(handlers, function (handler) {
-        if (typeof(handler) === 'function'){
-            handler(data);
-        } else {
-            console.error('handler is not a function');
-        }
+	var handlers = _.clone(this._nativeEventHandlers[eventName]);
+	var self = this;
+	_.forEach(handlers, function (handler) {
+		if (typeof(handler) === 'function'){
+			handler(data);
+		} else {
+			self.error('handler is not a function');
+		}
 
-    });
+	});
 };
 
 WsClient.prototype.say = function (eventName, data) {
-    data = data || {};
+	data = data || {};
 
-    const id = ++this._msgId;
-    return this._safeSend({id: id, name: eventName, data: data});
+	var id = ++this._msgId;
+	return this._safeSend({id: id, name: eventName, data: data});
 };
 
 WsClient.prototype.ask = function (eventName, data) {
-    const self = this;
+	var self = this;
 
-    data = data || {};
+	data = data || {};
 
-    const id = ++self._msgId;
+	var id = ++self._msgId;
 
-    return new Promise(function (resolve, reject) {
-        self._safeSend({id: id, name: eventName, data: data});
-        self._replyMap[id] = {resolve: resolve, reject: reject};
-    });
+	return new Promise(function (resolve, reject) {
+		self._safeSend({id: id, name: eventName, data: data});
+		self._replyMap[id] = {resolve: resolve, reject: reject};
+	});
 };
 
 WsClient.prototype.offEvent = function(eventName){
 
-    delete this._eventMap[eventName];
+	delete this._eventMap[eventName];
 
 };
 
 WsClient.prototype._onEvent = function (eventName, handler, isAsk) {
-    const self = this;
+	var self = this;
 
-    if (!_.isFunction(handler)) {
-        error('handler is not function');
-        throw new Error("handler is not function")
-    }
+	if (!_.isFunction(handler)) {
+		self.error('handler is not function');
+		throw new Error("handler is not function")
+	}
 
-    let eventHandler = self._eventMap[eventName];
+	var eventHandler = self._eventMap[eventName];
 
-    if (eventHandler) {
-        error("HANDLER ALREADY EXISTS FOR '{eventName}'!".format({eventName: eventName}));
-        return;
-    }
+	if (eventHandler) {
+		self.error("HANDLER ALREADY EXISTS FOR '{eventName}'!".format({eventName: eventName}));
+		return;
+	}
 
-    eventHandler = function (msg) {
-        const msgId = msg.id;
-        const data = msg.data;
+	eventHandler = function (msg) {
+		var msgId = msg.id;
+		var data = msg.data;
 
-        try {
-            const result = handler(data);
+		try {
+			var result = handler(data);
 
-            if (isAsk) {
-                self._safeSend({ok: true, replyTo: msgId, data: result});
-            }
+			if (isAsk) {
+				self._safeSend({ok: true, replyTo: msgId, data: result});
+			}
 
-            self._handleEventQueue();
-        } catch (err) {
-            let errorMsg = null;
+			self._handleEventQueue();
+		} catch (err) {
+			var errorMsg = null;
 
-            if (_.isString(err)) {
-                errorMsg = err;
-                error(err);
-            } else if (_.isError(err)) {
-                errorMsg = "Internal main error.";
-                error(err.stack);
-            } else {
-                errorMsg = err.toString();
-                error(err);
-            }
+			if (_.isString(err)) {
+				errorMsg = err;
+				error(err);
+			} else if (_.isError(err)) {
+				errorMsg = "Internal main error.";
+				error(err.stack);
+			} else {
+				errorMsg = err.toString();
+				error(err);
+			}
 
-            if (isAsk) {
-                self._safeSend({ok: false, replyTo: msgId, error: errorMsg});
-            }
-        } finally {
-            self._handleEventQueue();
-        }
-    };
+			if (isAsk) {
+				self._safeSend({ok: false, replyTo: msgId, error: errorMsg});
+			}
+		} finally {
+			self._handleEventQueue();
+		}
+	};
 
-    self._eventMap[eventName] = eventHandler;
+	self._eventMap[eventName] = eventHandler;
 };
 
 WsClient.prototype.onSay = function (eventName, handler) {
-    this._onEvent(eventName, handler);
+	this._onEvent(eventName, handler);
 };
 
 WsClient.prototype.onAsk = function (eventName, handler) {
-    this._onEvent(eventName, handler, true);
+	this._onEvent(eventName, handler, true);
 };
 
 WsClient.prototype.close = function () {
-    this._socket.close.apply(this._socket, arguments);
+	this._socket.close.apply(this._socket, arguments);
 };
 
 WsClient.prototype.startHandleEvents = function () {
-    this._handleEvents = true;
-    this._handleEventQueue();
+	this._handleEvents = true;
+	this._handleEventQueue();
 };
 
 WsClient.prototype.stopHandleEvents = function () {
-    this._handleEvents = false;
+	this._handleEvents = false;
 };
 
 WsClient.prototype.isConnected = function () {
-    return this._isConnected;
+	return this._isConnected;
 };
 
 WsClient.prototype.url = function () {
-    return url.parse(this._socket.upgradeReq.url, true);
+	return url.parse(this._socket.upgradeReq.url, true);
 };
 
 WsClient.prototype.connect = function (wsUrl) {
-    const self = this;
+	var self = this;
 
-    try {
-        this._connectionString = wsUrl;
-        this._socket = new WebSocket(wsUrl);
+	try {
+		this._connectionString = wsUrl;
+		this._socket = new WebSocket(wsUrl);
 
-        this._initWebSocket();
+		this._initWebSocket();
 
-        return new Promise(function (resolve, reject) {
-            self.once('open', resolve);
-            self.once('close', reject);
-        });
-    } catch (e) {
-        return Promise.reject();
-    }
+		return new Promise(function (resolve, reject) {
+			self.once('open', resolve);
+			self.once('close', reject);
+		});
+	} catch (e) {
+		return Promise.reject();
+	}
 };
 
 WsClient.prototype._initWebSocket = function () {
-    const self = this;
+	var self = this;
 
-    if (self._connectionString) {
-        self._socket.onopen = function () {
-            log('ws connected to {_connectionString}'.format(self));
+	if (self._connectionString) {
+		self._socket.onopen = function () {
+			//log('ws connected to {_connectionString}'.format(self));
+			self.info('ws connected to {_connectionString}'.format(self));
 
-            self._isConnected = true;
-            self._wasOpen = true;
-            self.emit('open');
-        };
-    } else {
-        self._wasOpen = true;
-    }
+			self._isConnected = true;
+			self._wasOpen = true;
+			self.emit('open');
+		};
+	} else {
+		self._wasOpen = true;
+	}
 
-    self._socket.onclose = function (event) {
-        const closeCode = event.code;
-        const reason = event.reason;
+	self._socket.onclose = function (event) {
+		var closeCode = event.code;
+		var reason = event.reason;
 
-        log('ws disconnected: {closeCode} {reason}'.format({closeCode: closeCode, reason: reason}));
+		log('ws disconnected: {closeCode} {reason}'.format({closeCode: closeCode, reason: reason}));
 
-        self._isConnected = false;
+		self._isConnected = false;
 
-        //очищаем очередь callbackQueue
-        _.forEach(self.callbackQueue, function (obj, key) {
-            obj.reject();
-        });
+		//очищаем очередь callbackQueue
+		_.forEach(self.callbackQueue, function (obj, key) {
+			obj.reject();
+		});
 
-        if (self._wasOpen) {
-            self._wasOpen = false;
+		if (self._wasOpen) {
+			self._wasOpen = false;
 
-            self.emit('close', {
-                closeCode: closeCode,
-                reason: reason
-            });
-        }
+			self.emit('close', {
+				closeCode: closeCode,
+				reason: reason
+			});
+		}
 
-        if (closeCode === 1000 && reason === "SESSIONID_NOT_VALID") {
-            return;
-        }
+		if (closeCode === 1000 && reason === "SESSIONID_NOT_VALID") {
+			return;
+		}
 
-        if (self._connectionString) {
-            setTimeout(function () {
-                self.connect(self._connectionString);
-            }, 1000);
-        }
-    };
+		if (self._connectionString) {
+			setTimeout(function () {
+				self.connect(self._connectionString);
+			}, 1000);
+		}
+	};
 
-    self._socket.onerror = function (error) {
-        log('ws error: ' + error);
-    };
+	self._socket.onerror = function (error) {
+		self.error('ws error: ' + error);
+	};
 
-    self._socket.onmessage = function (event) {
-        const msg = event.data;
-        log('IN: {msg}'.format({msg: msg}));
+	self._socket.onmessage = function (event) {
+		var msg = event.data;
+		self.debug('IN: {msg}'.format({msg: msg}));
 
-        self._eventQueue.push(msg);
+		self._eventQueue.push(msg);
 
-        if (self._eventQueue.length === 1) {
-            self._handleEventQueue(msg);
-        }
-    };
+		if (self._eventQueue.length === 1) {
+			self._handleEventQueue(msg);
+		}
+	};
 };
 
 WsClient.prototype._safeSend = function (data) {
-    const self = this;
+	var self = this;
 
-    try {
-        const str = JSON.stringify(data);
-        const ws = self._socket;
+	try {
+		var str = JSON.stringify(data);
+		var ws = self._socket;
 
-        log("OUT: {str}".format({str: str}));
+		self.debug("OUT: {str}".format({str: str}));
 
-        ws.send(str);
-    } catch (e) {
-        console.error("Fail send: " + e.stack);
-    }
+		ws.send(str);
+	} catch (e) {
+		console.error("Fail send: " + e.stack);
+	}
 };
 
 WsClient.prototype._handleEventQueue = function () {
-    const self = this;
+	var self = this;
 
-    if (!self._handleEvents || self._eventQueue.length === 0) {
-        return;
-    }
+	if (!self._handleEvents || self._eventQueue.length === 0) {
+		return;
+	}
 
-    let msg = self._eventQueue.shift();
+	var msg = self._eventQueue.shift();
 
-    try {
-        msg = JSON.parse(msg);
-    } catch (e) {
-        error("FAKE PROTOCOL");
+	try {
+		msg = JSON.parse(msg);
+	} catch (e) {
+		error("FAKE PROTOCOL");
 
-        self._safeSend({ok: false, replyTo: msg.id, error: 'Wrong JSON'});
-        //.then(() => self._socket.close(1000, "Wrong protocol"));
+		self._safeSend({ok: false, replyTo: msg.id, error: 'Wrong JSON'});
+		//.then(() => self._socket.close(1000, "Wrong protocol"));
 
-        return;
-    }
+		return;
+	}
 
-    if (msg.replyTo) {
-        const obj = self._replyMap[msg.replyTo];
-        delete self._replyMap[msg.replyTo];
+	if (msg.replyTo) {
+		var obj = self._replyMap[msg.replyTo];
+		delete self._replyMap[msg.replyTo];
 
-        if (_.isUndefined(obj)) {
-            error('The handler for msg not found: #{replyTo}'.format({replyTo: msg.replyTo}));
-            //self._socket.close(1000, 'Wrong protocol');
-        } else {
-            if (msg.ok) {
-                obj.resolve(msg.data);
-            } else {
-                obj.reject(new WsError(msg.error, msg.errorMsg));
-            }
-        }
-    } else {
-        const eventHandler = self._eventMap[msg.name];
+		if (_.isUndefined(obj)) {
+			error('The handler for msg not found: #{replyTo}'.format({replyTo: msg.replyTo}));
+			//self._socket.close(1000, 'Wrong protocol');
+		} else {
+			if (msg.ok) {
+				obj.resolve(msg.data);
+			} else {
+				obj.reject(new WsError(msg.error, msg.errorMsg));
+			}
+		}
+	} else {
+		var eventHandler = self._eventMap[msg.name];
 
-        if (!eventHandler) {
-            console.error({
-                ok: false,
-                replyTo: msg.id,
-                error: 'Event "{name}" is not exists'.format({name: msg.name})
-            });
-        } else {
-            eventHandler(msg);
-        }
-    }
+		if (!eventHandler) {
+			console.error({
+				ok: false,
+				replyTo: msg.id,
+				error: 'Event "{name}" is not exists'.format({name: msg.name})
+			});
+		} else {
+			eventHandler(msg);
+		}
+	}
 };
 
 export default WsClient;
-
