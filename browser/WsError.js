@@ -1,4 +1,4 @@
-function WsError(name, message){
+function WsError(name, message, data){
     this.name = name;
     this.message = message;
 	this.data = data;
