@@ -261,17 +261,16 @@ class WsClient extends EventEmitter {
 				self._handleEventQueue();
 			} catch (err) {
 				let errorCode = null,
-					errorDescription = undefined;
+					errorDescription = undefined,
+					errorData = null;
 
 				if (_.isString(err)) {
 					errorCode = err;
 					logger.error(err);
-				} else if (err instanceof AppError) {
-					errorCode = err.name;
-					errorDescription = err.message;
-					logger.error(err);
 				} else if (_.isError(err)) {
-					errorCode = ERROR.INTERNAL_SERVER_ERROR;
+					errorCode = err.name || err.code || ERROR.INTERNAL_SERVER_ERROR;
+					errorDescription = err.message;
+					errorData = err.data;
 					if (err.name === 'ArangoError') {
 						logger.error(err.message, err.stack);
 					} else {
@@ -283,7 +282,7 @@ class WsClient extends EventEmitter {
 				}
 
 				if (msgId) {
-					self._safeSend({ ok: 0, replyTo: msgId, error: errorCode, errorMsg: errorDescription });
+					self._safeSend({ ok: 0, replyTo: msgId, error: errorCode, errorMsg: errorDescription, errorData: errorData });
 				}
 
 				self._handleEventQueue();

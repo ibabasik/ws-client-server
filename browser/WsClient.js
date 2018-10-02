@@ -369,7 +369,7 @@ WsClient.prototype._handleEventQueue = function () {
 			if (msg.ok) {
 				obj.resolve(msg.data);
 			} else {
-				obj.reject(new WsError(msg.error, msg.errorMsg));
+				obj.reject(new WsError(msg.error, msg.errorMsg,  msg.errorData));
 			}
 		}
 	} else {
