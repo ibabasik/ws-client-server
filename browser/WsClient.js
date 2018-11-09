@@ -258,6 +258,18 @@ WsClient.prototype.connect = function (wsUrl) {
 	}
 };
 
+WsClient.prototype.heartbeat = function () {
+	clearTimeout(this.pingTimeout);
+
+	// Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
+	// equal to the interval at which your server sends out pings plus a
+	// conservative assumption of the latency.
+	this.pingTimeout = setTimeout(() => {
+		console.log('Server not alive, terminating');
+		this._socket.terminate();
+	}, 30000 + 1000);
+}
+
 WsClient.prototype._initWebSocket = function () {
 	var self = this;
 
@@ -269,6 +281,8 @@ WsClient.prototype._initWebSocket = function () {
 			self._isConnected = true;
 			self._wasOpen = true;
 			self.emit('open');
+
+			//self.heartbeat();
 		};
 	} else {
 		self._wasOpen = true;
@@ -279,6 +293,8 @@ WsClient.prototype._initWebSocket = function () {
 		var reason = event.reason;
 
 		self.info('ws disconnected: {closeCode} {reason}'.format({closeCode: closeCode, reason: reason}));
+
+		//clearTimeout(self.pingTimeout);
 
 		self._isConnected = false;
 
