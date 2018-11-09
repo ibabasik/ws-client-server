@@ -4,7 +4,7 @@
 const _ = require('lodash'),
 	url = require('url'),
 	EventEmitter = require('events').EventEmitter,
-	WebSocket = require('uws'),
+	WebSocket = require('ws'),
 	intel = require('intel'),
 	{ AppError, ERROR } = require('./errorCodes'),
 	logger = intel.getLogger('wsClient').setLevel(intel.DEBUG),
@@ -40,7 +40,7 @@ class WsClient extends EventEmitter {
 	}
 
 	emit(...args) {
-		if (args[0] !== 'open' && args[0] !== 'close') {
+		if (args[0] !== 'open' && args[0] !== 'close' && args[0] !== 'pong') {
 			logger.error(`WHAT THE FUCKING EMIT! ${ JSON.stringify(args) }`);
 		}
 
@@ -94,6 +94,10 @@ class WsClient extends EventEmitter {
 		this._socket.close(...args);
 	}
 
+	terminate(){
+		this._socket.terminate();
+	}
+
 	startHandleEvents() {
 		this._handleEvents = true;
 		this._handleEventQueue();
@@ -129,6 +133,18 @@ class WsClient extends EventEmitter {
 		return this;
 	}
 
+	heartbeat() {
+		clearTimeout(this.pingTimeout);
+
+		// Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
+		// equal to the interval at which your server sends out pings plus a
+		// conservative assumption of the latency.
+		this.pingTimeout = setTimeout(() => {
+			console.log('Server not alive, terminating');
+			this._socket.terminate();
+		}, 30000 + 1000);
+	}
+
 	_initWebSocket() {
 		if (this._connectionString) {
 			this._socket.on('open', () => {
@@ -137,6 +153,7 @@ class WsClient extends EventEmitter {
 				this._isConnected = true;
 				this._wasOpen = true;
 				this.emit('open');
+				this.heartbeat();
 			});
 		} else {
 			this._wasOpen = true;
@@ -144,6 +161,8 @@ class WsClient extends EventEmitter {
 
 		this._socket.on('close', event => {
 			logger.verbose(`Socket ${this.uuid} disconnected`);
+
+			clearTimeout(this.pingTimeout);
 
 			const { code, reason } = event;
 
@@ -180,6 +199,17 @@ class WsClient extends EventEmitter {
 				this._handleEventQueue(msg);
 			}
 		});
+
+		this._socket.on('pong', () => {
+			this.emit('pong');
+		});
+
+		this._socket.on('ping', () => {
+			this.heartbeat();
+			//console.log('Client received ping');
+			//this._socket.send('pong');
+		});
+
 	}
 
 	_safeSend(data) {
@@ -289,6 +319,11 @@ class WsClient extends EventEmitter {
 			}
 		}
 	}
+
+	ping(){
+		this._socket.ping();
+	}
+
 }
 
 module.exports = WsClient;

@@ -49,6 +49,13 @@ describe('ws-client-server', function () {
         server.broadcast('magicNumber', 2);
     })
 
+    it('server and client should ping each other', function (done) {
+        setTimeout(() => {
+	        expect(server.clients.length).to.equal(1);
+            done();
+        }, 40*1000);
+    })
+
     it('client may close', function (done) {
         server.on('connection-closed', () => {
             expect(server.clients.length).to.equal(0);

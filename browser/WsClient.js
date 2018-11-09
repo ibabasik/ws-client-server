@@ -387,4 +387,12 @@ WsClient.prototype._handleEventQueue = function () {
 	}
 };
 
+WsClient.prototype.ping = function () {
+	this._socket.ping();
+};
+
+WsClient.prototype.terminate = function () {
+	this._socket.terminate();
+};
+
 export default WsClient;
