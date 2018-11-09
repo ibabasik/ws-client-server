@@ -25,11 +25,11 @@ class WsClient extends EventEmitter {
 		this._eventQueue = [];
 	}
 
-	static fromWebsocket(nativeWs) {
+	static fromWebsocket(nativeWs, req) {
 		let client = new WsClient();
 
 		client._socket = nativeWs;
-		client._upgradeReq = nativeWs.upgradeReq;
+		client._upgradeReq = req;
 		client._initWebSocket();
 
 		return client;

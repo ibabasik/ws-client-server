@@ -29,8 +29,8 @@ class WsServer extends EventEmitter {
 		this._socketServer = new WebSocket.Server({ server, port });
 		//this._socketServer.startAutoPing(30 * 1000);
 
-		this._socketServer.on('connection', nativeWs => {
-			let ws = MyClient.fromWebsocket(nativeWs);
+		this._socketServer.on('connection', (nativeWs, req) => {
+			let ws = MyClient.fromWebsocket(nativeWs, req);
 			this.clients.push(ws);
 			ws.isAlive = true;
 			ws.on('pong', () => {
