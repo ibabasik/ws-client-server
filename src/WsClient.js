@@ -223,7 +223,7 @@ class WsClient extends EventEmitter {
 			ws.send(str, function (err) {
 				if (err) {
 					logger.error(`${ ws._id }: Fail async: ${ err }!`);
-					reject();
+					reject(err);
 				}
 
 				resolve();
