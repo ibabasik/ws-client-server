@@ -133,17 +133,17 @@ class WsClient extends EventEmitter {
 		return this;
 	}
 
-	heartbeat() {
-		clearTimeout(this.pingTimeout);
-
-		// Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
-		// equal to the interval at which your server sends out pings plus a
-		// conservative assumption of the latency.
-		this.pingTimeout = setTimeout(() => {
-			console.log('Server not alive, terminating');
-			this._socket.terminate();
-		}, 30000 + 1000);
-	}
+	// heartbeat() {
+	// 	clearTimeout(this.pingTimeout);
+	//
+	// 	// Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
+	// 	// equal to the interval at which your server sends out pings plus a
+	// 	// conservative assumption of the latency.
+	// 	this.pingTimeout = setTimeout(() => {
+	// 		console.log('Server not alive, terminating');
+	// 		this._socket.terminate();
+	// 	}, 30000 + 1000);
+	// }
 
 	_initWebSocket() {
 		if (this._connectionString) {
@@ -153,7 +153,7 @@ class WsClient extends EventEmitter {
 				this._isConnected = true;
 				this._wasOpen = true;
 				this.emit('open');
-				this.heartbeat();
+				//this.heartbeat();
 			});
 		} else {
 			this._wasOpen = true;
@@ -162,7 +162,7 @@ class WsClient extends EventEmitter {
 		this._socket.on('close', event => {
 			logger.verbose(`Socket ${this.uuid} disconnected`);
 
-			clearTimeout(this.pingTimeout);
+			//clearTimeout(this.pingTimeout);
 
 			const { code, reason } = event;
 
@@ -200,15 +200,15 @@ class WsClient extends EventEmitter {
 			}
 		});
 
-		this._socket.on('pong', () => {
-			this.emit('pong');
-		});
-
-		this._socket.on('ping', () => {
-			this.heartbeat();
-			//console.log('Client received ping');
-			//this._socket.send('pong');
-		});
+		// this._socket.on('pong', () => {
+		// 	this.emit('pong');
+		// });
+		//
+		// this._socket.on('ping', () => {
+		// 	this.heartbeat();
+		// 	//console.log('Client received ping');
+		// 	//this._socket.send('pong');
+		// });
 
 	}
 
