@@ -1,67 +1,79 @@
 const { expect } = require('chai'),
-    EventEmitter = require('events'),
-    { WsClient, WsServer } = require('../index');
+	EventEmitter = require('events'),
+	{ WsClient, WsServer } = require('../index');
 
 describe('ws-client-server', function () {
+	const testAutoPingInterval = 5000;
+	const server = new WsServer({ port: 63456, autoPingInterval: testAutoPingInterval });
 
-    const server = new WsServer({ port: 63456 });
+	it('WsServer constructor should return WsServer instance and be EventEmitter', function () {
+		expect(server).to.be.an.instanceOf(WsServer);
+		expect(server).to.be.an.instanceOf(EventEmitter);
+	});
 
-    it('WsServer constructor should return WsServer instance and be EventEmitter', function () {
-        expect(server).to.be.an.instanceOf(WsServer);
-        expect(server).to.be.an.instanceOf(EventEmitter);
-    });
+	server.on('connection', function (ws) {
+		ws.setInterceptor(function ({ eventName, data}) {
+			//console.log(`eventName: ${eventName}, data: ${JSON.stringify(data)}`);
+			return { ok: 1 };
+		})
+	});
 
-    server.on('connection', function (ws) {
+	const client = new WsClient();
 
-        ws.setInterceptor(function ({ eventName, data}) {
-            //console.log(`eventName: ${eventName}, data: ${JSON.stringify(data)}`);
-            return { ok: 1 };
-        })
+	before(function(done){
+		client.connect('ws://localhost:63456');
+		client.once('open', done);
+	});
 
-    });
+	after(function(){
+		server.close();
+		client.close();
+	});
 
-    let client;
-    it('client should connect', function (done) {
-        client = new WsClient();
-        client.once('open', done);
-        client.once('error', done);
-        client.connect('ws://localhost:63456');
-    })
+	it('clients length should be 1', function () {
+		expect(server.clients.length).to.equal(1);
+	});
 
-    it('clients length should be 1', function () {
-        expect(server.clients.length).to.equal(1);
-    })
+	it('client should ask server for time', function (done) {
+		client.ask('getCurrentTime').then(({ ok }) => {
+			if (!ok){
+				return done(new Error('Not ok'));
+			}
 
-    it('client should ask server for time', function (done) {
-        client.ask('getCurrentTime').then(({ ok }) => {
-            if (!ok){
-                return done(new Error('Not ok'));
-            }
-            done();
-        }, done);
-    })
+			done();
+		}, done);
+	});
 
-    it('server should be able to broadcast message', function (done) {
-        client.onSay('magicNumber', (number) => {
-            expect(number).to.equal(2);
-            done();
-        })
-        server.broadcast('magicNumber', 2);
-    })
+	it('server should be able to broadcast message', function (done) {
+		client.onSay('magicNumber', number => {
+			expect(number).to.equal(42);
+			done();
+		});
 
-    // it('server and client should ping each other', function (done) {
-    //     setTimeout(() => {
-	//         expect(server.clients.length).to.equal(1);
-    //         done();
-    //     }, 40*1000);
-    // })
+		server.broadcast('magicNumber', 42);
+	});
 
-    it('client may close', function (done) {
-        server.on('connection-closed', () => {
-            expect(server.clients.length).to.equal(0);
-            done();
-        })
-        client.close();
-    })
+	/*it('server and client should ping each other', function (done) {
+	     setTimeout(() => {
+	         expect(server.clients.length).to.equal(1);
+	         done();
+	     }, 10*1000);
+	 });*/
 
+	it('server pings client', function (done) {
+		server.clients[0].on('pong', a => {
+			done();
+		});
+
+		server.clients[0].ping();
+	});
+
+	it('client may close', function (done) {
+		server.on('connection-closed', () => {
+			expect(server.clients.length).to.equal(0);
+			done();
+		});
+
+		client.close();
+	});
 });
