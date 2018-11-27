@@ -10,7 +10,7 @@ class WsServer extends EventEmitter {
 		this.clients = [];
 		this._initSocketServer({ server, port });
 
-		const interval = setInterval(() => {
+		this._autoPingInterval = setInterval(() => {
 			for (const ws of this.clients) {
 				if (ws.isAlive === false) {
 					console.log('Client not alive, terminating');
@@ -58,6 +58,7 @@ class WsServer extends EventEmitter {
 	}
 
 	close(...args) {
+		clearInterval(this._autoPingInterval);
 		this._socketServer.close(...args);
 	}
 }

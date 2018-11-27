@@ -18,6 +18,7 @@ class WsClient extends EventEmitter {
 		this._msgId = 0;
 		this._isConnected = false;
 		this._handleEvents = true;
+		this._isClosed = false;
 
 		this._autoPingInterval = autoPingInterval;
 
@@ -93,6 +94,8 @@ class WsClient extends EventEmitter {
 	}
 
 	close(...args) {
+		clearTimeout(this.pingTimeout);
+		this._isClosed = true;
 		this._socket.close(...args);
 	}
 
@@ -179,7 +182,7 @@ class WsClient extends EventEmitter {
 				this.emit('close', code, reason);
 			}
 
-			if (this._connectionString) {
+			if (this._connectionString && !this._isClosed) {
 				setTimeout(() => this.connect(this._connectionString), 1000);
 			}
 		});
@@ -187,7 +190,7 @@ class WsClient extends EventEmitter {
 		this._socket.on('error', error => {
 			logger.verbose('WebSocket error: ' + error);
 
-			if (this._connectionString) {
+			if (this._connectionString && !this._isClosed) {
 				setTimeout(() => this.connect(this._connectionString), 1000);
 			}
 		});

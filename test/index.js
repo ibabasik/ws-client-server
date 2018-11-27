@@ -15,7 +15,7 @@ describe('ws-client-server', function () {
 		ws.setInterceptor(function ({ eventName, data}) {
 			//console.log(`eventName: ${eventName}, data: ${JSON.stringify(data)}`);
 			return { ok: 1 };
-		})
+		});
 	});
 
 	const client = new WsClient();
