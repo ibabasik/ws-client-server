@@ -11,13 +11,16 @@ const _ = require('lodash'),
 	uuid = require('uuid');
 
 class WsClient extends EventEmitter {
-	constructor() {
+	constructor({ autoPingInterval = 60 * 1000 } = {}) {
 		super();
 
 		this.uuid = uuid.v4();
 		this._msgId = 0;
 		this._isConnected = false;
 		this._handleEvents = true;
+		this._isClosed = false;
+
+		this._autoPingInterval = autoPingInterval;
 
 		this._interceptor = null;
 		this._replyMap = new Map();
@@ -25,9 +28,10 @@ class WsClient extends EventEmitter {
 		this._eventQueue = [];
 	}
 
-	static fromWebsocket(nativeWs, req) {
+	static fromWebsocket(nativeWs, req, { autoPingInterval = 60 * 1000 } = {}) {
 		let client = new WsClient();
 
+		client._autoPingInterval = autoPingInterval;
 		client._socket = nativeWs;
 		client._upgradeReq = req;
 		client._initWebSocket();
@@ -48,7 +52,6 @@ class WsClient extends EventEmitter {
 	}
 
 	say(eventName, data = {}) {
-
 		return this._safeSend({ name: eventName, data: data })
 			.catch(err => logger.error(err.stack));
 	}
@@ -91,6 +94,8 @@ class WsClient extends EventEmitter {
 	}
 
 	close(...args) {
+		clearTimeout(this.pingTimeout);
+		this._isClosed = true;
 		this._socket.close(...args);
 	}
 
@@ -133,27 +138,28 @@ class WsClient extends EventEmitter {
 		return this;
 	}
 
-	// heartbeat() {
-	// 	clearTimeout(this.pingTimeout);
-	//
-	// 	// Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
-	// 	// equal to the interval at which your server sends out pings plus a
-	// 	// conservative assumption of the latency.
-	// 	this.pingTimeout = setTimeout(() => {
-	// 		console.log('Server not alive, terminating');
-	// 		this._socket.terminate();
-	// 	}, 30000 + 1000);
-	// }
+	heartbeat() {
+		clearTimeout(this.pingTimeout);
+
+		// Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
+		// equal to the interval at which your server sends out pings plus a
+		// conservative assumption of the latency.
+		this.pingTimeout = setTimeout(() => {
+			console.log('Server not alive, terminating');
+			this._socket.terminate();
+		}, this._autoPingInterval);
+	}
 
 	_initWebSocket() {
 		if (this._connectionString) {
 			this._socket.on('open', () => {
 				logger.verbose(`Socket ${this.uuid} connected to ${this._connectionString}`);
 
+				this.heartbeat();
+
 				this._isConnected = true;
 				this._wasOpen = true;
 				this.emit('open');
-				//this.heartbeat();
 			});
 		} else {
 			this._wasOpen = true;
@@ -162,11 +168,10 @@ class WsClient extends EventEmitter {
 		this._socket.on('close', event => {
 			logger.verbose(`Socket ${this.uuid} disconnected`);
 
-			//clearTimeout(this.pingTimeout);
+			this._isConnected = false;
+			clearTimeout(this.pingTimeout);
 
 			const { code, reason } = event;
-
-			this._isConnected = false;
 
 			//очищаем очередь callbackQueue
 			_.forEach(this.callbackQueue, obj => obj.reject());
@@ -177,7 +182,7 @@ class WsClient extends EventEmitter {
 				this.emit('close', code, reason);
 			}
 
-			if (this._connectionString) {
+			if (this._connectionString && !this._isClosed) {
 				setTimeout(() => this.connect(this._connectionString), 1000);
 			}
 		});
@@ -185,7 +190,7 @@ class WsClient extends EventEmitter {
 		this._socket.on('error', error => {
 			logger.verbose('WebSocket error: ' + error);
 
-			if (this._connectionString) {
+			if (this._connectionString && !this._isClosed) {
 				setTimeout(() => this.connect(this._connectionString), 1000);
 			}
 		});
@@ -200,16 +205,14 @@ class WsClient extends EventEmitter {
 			}
 		});
 
-		// this._socket.on('pong', () => {
-		// 	this.emit('pong');
-		// });
-		//
-		// this._socket.on('ping', () => {
-		// 	this.heartbeat();
-		// 	//console.log('Client received ping');
-		// 	//this._socket.send('pong');
-		// });
+		this._socket.on('pong', () => {
+			this.emit('pong');
+		});
 
+		this._socket.on('ping', () => {
+			this.heartbeat();
+			console.log('Client received ping');
+		});
 	}
 
 	_safeSend(data) {
