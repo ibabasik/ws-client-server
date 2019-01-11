@@ -1,6 +1,6 @@
 {
   "name": "ws-client-server",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Wrapper for native WebSocket",
   "main": "index.js",
   "browser": "src/WsClient.js",
