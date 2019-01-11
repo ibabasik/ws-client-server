@@ -5,14 +5,10 @@ const _ = require('lodash'),
 	url = require('url'),
 	EventEmitter = require('events').EventEmitter,
 	WebSocket = require('ws'),
+	intel = require('intel'),
 	{ AppError, ERROR } = require('./errorCodes'),
+	logger = intel.getLogger('wsClient').setLevel(intel.DEBUG),
 	uuid = require('uuid');
-
-const logger = {
-	info: console.info,
-	verbose: console.trace,
-	error: console.error
-};
 
 class WsClient extends EventEmitter {
 	constructor({ autoPingInterval = 60 * 1000 } = {}) {
