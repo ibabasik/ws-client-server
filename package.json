@@ -3,7 +3,7 @@
   "version": "1.5.0",
   "description": "Wrapper for native WebSocket",
   "main": "index.js",
-  "browser": "src/WsClient.js",
+  "browser": "browser/WsClient.js",
   "scripts": {
     "prepublish": "yarn run test",
     "test": "NODE_ENV=test mocha --reporter spec test --exit"
