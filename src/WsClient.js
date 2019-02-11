@@ -145,7 +145,7 @@ class WsClient extends EventEmitter {
 		// equal to the interval at which your server sends out pings plus a
 		// conservative assumption of the latency.
 		this.pingTimeout = setTimeout(() => {
-			console.log('Server not alive, terminating');
+			logger.verbose('Server not alive, terminating');
 			this._socket.terminate();
 		}, this._autoPingInterval);
 	}
@@ -190,9 +190,9 @@ class WsClient extends EventEmitter {
 		this._socket.on('error', error => {
 			logger.verbose('WebSocket error: ' + error);
 
-			if (this._connectionString && !this._isClosed) {
+			/*if (this._connectionString && !this._isClosed) {
 				setTimeout(() => this.connect(this._connectionString), 1000);
-			}
+			}*/
 		});
 
 		this._socket.on('message', msg => {
@@ -211,7 +211,7 @@ class WsClient extends EventEmitter {
 
 		this._socket.on('ping', () => {
 			this.heartbeat();
-			console.log('Client received ping');
+			logger.verbose('Client received ping');
 		});
 	}
 

@@ -1,28 +1,28 @@
 {
-  "name": "ws-client-server",
-  "version": "1.6.0",
-  "description": "Wrapper for native WebSocket",
-  "main": "index.js",
-  "browser": "browser/WsClient.js",
-  "scripts": {
-    "prepublish": "yarn run test",
-    "test": "NODE_ENV=test mocha --reporter spec test --exit"
-  },
-  "author": "ibabasik@yandex.ru",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "intel": "^1.2.0",
-    "lodash": "^4.17.10",
-    "uuid": "^3.3.2",
-    "ws": "^6.1.0"
-  },
-  "devDependencies": {
-    "chai": "^4.1.2",
-    "mocha": "^5.2.0",
-    "nyc": "^13.1.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ibabasik/ws-client-server"
-  }
+	"name": "ws-client-server",
+	"version": "1.6.0",
+	"description": "Wrapper for native WebSocket",
+	"main": "index.js",
+	"browser": "browser/WsClient.js",
+	"scripts": {
+		"prepublish": "yarn run test",
+		"test": "NODE_ENV=test mocha --reporter spec test --exit"
+	},
+	"author": "ibabasik@yandex.ru",
+	"license": "Apache-2.0",
+	"dependencies": {
+		"intel": "^1.2.0",
+		"lodash": "^4.17.10",
+		"uuid": "^3.3.2",
+		"ws": "^6.1.0"
+	},
+	"devDependencies": {
+		"chai": "^4.1.2",
+		"mocha": "^5.2.0",
+		"nyc": "^13.1.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ibabasik/ws-client-server"
+	}
 }

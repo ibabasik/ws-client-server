@@ -135,7 +135,9 @@ WsClient.prototype.emit = function (eventName, data) {
 
 WsClient.prototype.say = function (eventName, data) {
 	data = data || {};
-	return this._safeSend({ name: eventName, data: data });
+
+	var id = ++this._msgId;
+	return this._safeSend({id: id, name: eventName, data: data});
 };
 
 WsClient.prototype.ask = function (eventName, data) {
