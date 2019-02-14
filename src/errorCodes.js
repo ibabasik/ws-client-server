@@ -9,12 +9,9 @@ module.exports.ERROR = {
 
 class AppError extends Error {
 	constructor(errorCode, description, data = null) {
-		if (!errorCode){
-			throw new Error('Fail errorCode');
-		}
-
 		super();
-		this.name = errorCode;
+		this.name = 'AppError';
+		this.code = errorCode;
 		this.message = description;
 
 		if (data) {

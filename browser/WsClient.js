@@ -23,7 +23,7 @@ var _ = {
 
 
 if (!String.prototype.format) {
-	String.prototype.format = function() {
+	String.prototype.format = function () {
 		var str = this.toString();
 
 		if (!arguments.length) {
@@ -64,29 +64,29 @@ function WsClient(options) {
 	this._nativeEventHandlers = {};
 	this._logLevel = logLevels[options.logLevel || 'info'];
 	var self = this;
-	this.debug = function(){
-		if (self._logLevel >= logLevels.debug){
+	this.debug = function () {
+		if (self._logLevel >= logLevels.debug) {
 			var args = ['DEBUG:'].concat(Array.prototype.slice.call(arguments, 0));
 			console.log.apply(console, args);
 		}
-	}
-	this.error = function(){
-		if (self._logLevel >= logLevels.error){
+	};
+	this.error = function () {
+		if (self._logLevel >= logLevels.error) {
 			console.error.apply(console, arguments);
 		}
-	}
-	this.info = function() {
-		if (self._logLevel >= logLevels.info){
+	};
+	this.info = function () {
+		if (self._logLevel >= logLevels.info) {
 			var args = ['INFO:'].concat(Array.prototype.slice.call(arguments, 0));
 			console.log.apply(console, args);
 		}
-	}
-	this.verbose =function () {
-		if (self._logLevel >= logLevels.verbose){
+	};
+	this.verbose = function () {
+		if (self._logLevel >= logLevels.verbose) {
 			var args = ['VERBOSE:'].concat(Array.prototype.slice.call(arguments, 0));
 			console.log.apply(console, args);
 		}
-	}
+	};
 }
 
 WsClient.prototype.on = function (eventName, handler) {
@@ -99,7 +99,7 @@ WsClient.prototype.on = function (eventName, handler) {
 	handlers.push(handler);
 };
 
-WsClient.prototype.once = function (eventName, handler){
+WsClient.prototype.once = function (eventName, handler) {
 	var self = this;
 
 	var handlers = this._nativeEventHandlers[eventName];
@@ -124,7 +124,7 @@ WsClient.prototype.emit = function (eventName, data) {
 	var handlers = _.clone(this._nativeEventHandlers[eventName]);
 	var self = this;
 	_.forEach(handlers, function (handler) {
-		if (typeof(handler) === 'function'){
+		if (typeof (handler) === 'function') {
 			handler(data);
 		} else {
 			self.error('handler is not a function');
@@ -148,12 +148,12 @@ WsClient.prototype.ask = function (eventName, data) {
 	var id = ++self._msgId;
 
 	return new Promise(function (resolve, reject) {
-		self._safeSend({id: id, name: eventName, data: data});
-		self._replyMap[id] = {resolve: resolve, reject: reject};
+		self._safeSend({ id: id, name: eventName, data: data });
+		self._replyMap[id] = { resolve: resolve, reject: reject };
 	});
 };
 
-WsClient.prototype.offEvent = function(eventName){
+WsClient.prototype.offEvent = function (eventName) {
 
 	delete this._eventMap[eventName];
 
@@ -164,13 +164,13 @@ WsClient.prototype._onEvent = function (eventName, handler, isAsk) {
 
 	if (!_.isFunction(handler)) {
 		self.error('handler is not function');
-		throw new Error("handler is not function")
+		throw new Error('handler is not function');
 	}
 
 	var eventHandler = self._eventMap[eventName];
 
 	if (eventHandler) {
-		self.error("HANDLER ALREADY EXISTS FOR '{eventName}'!".format({eventName: eventName}));
+		self.error('HANDLER ALREADY EXISTS FOR \'{eventName}\'!'.format({ eventName: eventName }));
 		return;
 	}
 
@@ -182,7 +182,7 @@ WsClient.prototype._onEvent = function (eventName, handler, isAsk) {
 			var result = handler(data);
 
 			if (isAsk) {
-				self._safeSend({ok: true, replyTo: msgId, data: result});
+				self._safeSend({ ok: true, replyTo: msgId, data: result });
 			}
 
 			self._handleEventQueue();
@@ -193,7 +193,7 @@ WsClient.prototype._onEvent = function (eventName, handler, isAsk) {
 				errorMsg = err;
 				self.error(err);
 			} else if (_.isError(err)) {
-				errorMsg = "Internal main error.";
+				errorMsg = 'Internal main error.';
 				self.error(err.stack);
 			} else {
 				errorMsg = err.toString();
@@ -201,7 +201,7 @@ WsClient.prototype._onEvent = function (eventName, handler, isAsk) {
 			}
 
 			if (isAsk) {
-				self._safeSend({ok: false, replyTo: msgId, error: errorMsg});
+				self._safeSend({ ok: false, replyTo: msgId, error: errorMsg });
 			}
 		} finally {
 			self._handleEventQueue();
@@ -292,7 +292,7 @@ WsClient.prototype._initWebSocket = function () {
 		var closeCode = event.code;
 		var reason = event.reason;
 
-		self.info('ws disconnected: {closeCode} {reason}'.format({closeCode: closeCode, reason: reason}));
+		self.info('ws disconnected: {closeCode} {reason}'.format({ closeCode: closeCode, reason: reason }));
 
 		//clearTimeout(self.pingTimeout);
 
@@ -312,7 +312,7 @@ WsClient.prototype._initWebSocket = function () {
 			});
 		}
 
-		if (closeCode === 1000 && reason === "SESSIONID_NOT_VALID") {
+		if (closeCode === 1000 && reason === 'SESSIONID_NOT_VALID') {
 			return;
 		}
 
@@ -329,7 +329,7 @@ WsClient.prototype._initWebSocket = function () {
 
 	self._socket.onmessage = function (event) {
 		var msg = event.data;
-		self.debug('IN: {msg}'.format({msg: msg}));
+		self.debug('IN: {msg}'.format({ msg: msg }));
 
 		self._eventQueue.push(msg);
 
@@ -346,11 +346,11 @@ WsClient.prototype._safeSend = function (data) {
 		var str = JSON.stringify(data);
 		var ws = self._socket;
 
-		self.debug("OUT: {str}".format({str: str}));
+		self.debug('OUT: {str}'.format({ str: str }));
 
 		ws.send(str);
 	} catch (e) {
-		self.error("Fail send: " + e.stack);
+		self.error('Fail send: ' + e.stack);
 	}
 };
 
@@ -366,9 +366,9 @@ WsClient.prototype._handleEventQueue = function () {
 	try {
 		msg = JSON.parse(msg);
 	} catch (e) {
-		self.error("FAKE PROTOCOL");
+		self.error('FAKE PROTOCOL');
 
-		self._safeSend({ok: false, replyTo: msg.id, error: 'Wrong JSON'});
+		self._safeSend({ ok: false, replyTo: msg.id, error: 'Wrong JSON' });
 		//.then(() => self._socket.close(1000, "Wrong protocol"));
 
 		return;
@@ -379,13 +379,13 @@ WsClient.prototype._handleEventQueue = function () {
 		delete self._replyMap[msg.replyTo];
 
 		if (_.isUndefined(obj)) {
-			self.error('The handler for msg not found: #{replyTo}'.format({replyTo: msg.replyTo}));
+			self.error('The handler for msg not found: #{replyTo}'.format({ replyTo: msg.replyTo }));
 			//self._socket.close(1000, 'Wrong protocol');
 		} else {
 			if (msg.ok) {
 				obj.resolve(msg.data);
 			} else {
-				obj.reject(new WsError(msg.error, msg.errorMsg,  msg.errorData));
+				obj.reject(new WsError(msg.error, msg.errorMsg, msg.errorData));
 			}
 		}
 	} else {
@@ -395,7 +395,7 @@ WsClient.prototype._handleEventQueue = function () {
 			self.error({
 				ok: false,
 				replyTo: msg.id,
-				error: 'Event "{name}" is not exists'.format({name: msg.name})
+				error: 'Event "{name}" is not exists'.format({ name: msg.name })
 			});
 		} else {
 			eventHandler(msg);

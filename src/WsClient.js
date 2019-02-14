@@ -45,7 +45,7 @@ class WsClient extends EventEmitter {
 
 	emit(...args) {
 		if (args[0] !== 'open' && args[0] !== 'close' && args[0] !== 'pong') {
-			logger.error(`WHAT THE FUCKING EMIT! ${ JSON.stringify(args) }`);
+			logger.error(`WHAT THE FUCKING EMIT! ${JSON.stringify(args)}`);
 		}
 
 		super.emit(...args);
@@ -99,7 +99,7 @@ class WsClient extends EventEmitter {
 		this._socket.close(...args);
 	}
 
-	terminate(){
+	terminate() {
 		this._socket.terminate();
 	}
 
@@ -145,7 +145,7 @@ class WsClient extends EventEmitter {
 		// equal to the interval at which your server sends out pings plus a
 		// conservative assumption of the latency.
 		this.pingTimeout = setTimeout(() => {
-			console.log('Server not alive, terminating');
+			logger.verbose('Server not alive, terminating');
 			this._socket.terminate();
 		}, this._autoPingInterval);
 	}
@@ -190,13 +190,13 @@ class WsClient extends EventEmitter {
 		this._socket.on('error', error => {
 			logger.verbose('WebSocket error: ' + error);
 
-			if (this._connectionString && !this._isClosed) {
+			/*if (this._connectionString && !this._isClosed) {
 				setTimeout(() => this.connect(this._connectionString), 1000);
-			}
+			}*/
 		});
 
 		this._socket.on('message', msg => {
-			logger.verbose(`IN ${ this.uuid }: ${msg}`);
+			logger.verbose(`IN ${this.uuid}: ${msg}`);
 
 			this._eventQueue.push(msg);
 
@@ -211,7 +211,7 @@ class WsClient extends EventEmitter {
 
 		this._socket.on('ping', () => {
 			this.heartbeat();
-			console.log('Client received ping');
+			logger.verbose('Client received ping');
 		});
 	}
 
@@ -220,12 +220,12 @@ class WsClient extends EventEmitter {
 			let str = JSON.stringify(data);
 			let ws = this._socket;
 
-			const logJson = str;//.length < 50 ? str : str.substring(0, 50) + '[...]';
-			logger.verbose(`OUT ${ this.uuid }: ${logJson}`);
+			const logJson = str; //.length < 50 ? str : str.substring(0, 50) + '[...]';
+			logger.verbose(`OUT ${this.uuid}: ${logJson}`);
 
 			ws.send(str, function (err) {
 				if (err) {
-					logger.error(`${ ws._id }: Fail async: ${ err }!`);
+					logger.error(`${ws._id}: Fail async: ${err}!`);
 					reject(err);
 				}
 
@@ -248,10 +248,7 @@ class WsClient extends EventEmitter {
 			msg = JSON.parse(msg);
 		} catch (e) {
 			logger.error('FAKE PROTOCOL');
-
 			this._safeSend({ ok: 0, replyTo: msg.id, error: 'Wrong JSON' });
-			//.then(() => this._socket.close(1000, "Wrong protocol"));
-
 			return;
 		}
 
@@ -259,22 +256,23 @@ class WsClient extends EventEmitter {
 			let obj = this._replyMap.get(msg.replyTo);
 			this._replyMap.delete(msg.replyTo);
 
-			if (_.isUndefined(obj)) {
-				logger.error(`${ this.uuid }: The handler for msg not found: #${msg.replyTo}`);
-				//this._socket.close(1000, 'Wrong protocol');
+			if (!obj) {
+				this.close('Wrong protocol');
+			}
+
+			if (msg.ok) {
+				obj.resolve(msg.data);
 			} else {
-				if (msg.ok) {
-					obj.resolve(msg.data);
-				} else {
-					let err = new Error(msg.error);
-					logger.error(err);
-					obj.reject(err);
-				}
+				let err = new Error(msg.error);
+				err.description = msg.errorMsg;
+				err.data = msg.errorData;
+
+				logger.error(err);
+				obj.reject(err);
 			}
 		} else {
 			const { id: msgId, data } = msg,
 				handler = this._eventMap.get(msg.name);
-
 
 			try {
 				let result;
@@ -284,7 +282,7 @@ class WsClient extends EventEmitter {
 				} else if (interceptor) {
 					result = await interceptor({ eventName: msg.name, data: msg.data });
 				} else {
-				    throw new AppError(ERROR.EVENT_NOT_EXISTS, 'Обработчик этого метода не существует');
+					throw new AppError(ERROR.EVENT_NOT_EXISTS, 'Обработчик этого метода не существует');
 				}
 
 				if (msgId) {
@@ -301,7 +299,7 @@ class WsClient extends EventEmitter {
 					errorCode = err;
 					logger.error(err);
 				} else if (_.isError(err)) {
-					errorCode = err.name || err.code || ERROR.INTERNAL_SERVER_ERROR;
+					errorCode = /* err.name || */ err.code || ERROR.INTERNAL_SERVER_ERROR;
 					errorDescription = err.message;
 					errorData = err.data;
 					if (err.name === 'ArangoError') {
@@ -315,7 +313,13 @@ class WsClient extends EventEmitter {
 				}
 
 				if (msgId) {
-					self._safeSend({ ok: 0, replyTo: msgId, error: errorCode, errorMsg: errorDescription, errorData: errorData });
+					self._safeSend({
+						ok: 0,
+						replyTo: msgId,
+						error: errorCode,
+						errorMsg: errorDescription,
+						errorData: errorData
+					});
 				}
 
 				self._handleEventQueue();
@@ -323,7 +327,7 @@ class WsClient extends EventEmitter {
 		}
 	}
 
-	ping(){
+	ping() {
 		this._socket.ping();
 	}
 
