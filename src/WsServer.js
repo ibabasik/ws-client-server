@@ -20,7 +20,7 @@ class WsServer extends EventEmitter {
 
 				ws.isAlive = false;
 				ws.ping();
-				console.log('Server sent ping');
+				//console.log('Server sent ping');
 			}
 		}, autoPingInterval);
 	}
@@ -35,7 +35,7 @@ class WsServer extends EventEmitter {
 			ws.isAlive = true;
 			ws.on('pong', () => {
 				ws.isAlive = true;
-				console.log('Server received pong');
+				//console.log('Server received pong');
 			});
 
 			ws.on('close', () => {

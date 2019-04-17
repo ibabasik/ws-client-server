@@ -165,13 +165,13 @@ class WsClient extends EventEmitter {
 			this._wasOpen = true;
 		}
 
-		this._socket.on('close', event => {
+		this._socket.on('close', (code, reason) => {
 			logger.verbose(`Socket ${this.uuid} disconnected`);
 
 			this._isConnected = false;
 			clearTimeout(this.pingTimeout);
 
-			const { code, reason } = event;
+			//const { code, reason } = event;
 
 			//очищаем очередь callbackQueue
 			_.forEach(this.callbackQueue, obj => obj.reject());
