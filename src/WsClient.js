@@ -257,7 +257,8 @@ class WsClient extends EventEmitter {
 			this._replyMap.delete(msg.replyTo);
 
 			if (!obj) {
-				this.close('Wrong protocol');
+				this.close(1002, 'Wrong protocol');
+				return;
 			}
 
 			if (msg.ok) {
